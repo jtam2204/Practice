@@ -1,2 +1,2 @@
-# simple calculator
-simple calculator with only +,-,*,/ operators, no brackets
+# practices
+1. simple calculator with only +,-,*,/ operators, no brackets
