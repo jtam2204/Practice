@@ -22,6 +22,8 @@ class GoGrid:
         def check_liberties(r, c):
             if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE and board[r][c].empty:
                 liberties.add((r, c))
+            elif 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE and board[r][c].color == self.color:
+                liberties.update(board[r][c].has_liberties(board))
 
         check_liberties(row - 1, col)
         check_liberties(row + 1, col)
@@ -51,13 +53,6 @@ def draw_board(screen, board):
                 pygame.draw.circle(screen, WHITE, (x + GRID_WIDTH // 2, y + GRID_WIDTH // 2), GRID_WIDTH // 2 - 3)
 
             pygame.draw.rect(screen, BLACK, (x, y, GRID_WIDTH, GRID_WIDTH), 1)
-
-def handle_player_move(board, mouseX, mouseY, color):
-    col = mouseX // GRID_WIDTH
-    row = mouseY // GRID_WIDTH
-
-    if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE and board[row][col].empty:
-        board[row][col].place_stone(color)
 
 def undo_move(board, move_history):
     if move_history:
@@ -93,6 +88,93 @@ def draw_pass_button(screen, font):
 
     return pass_button
 
+def draw_restart_button(screen, font):
+    restart_button = pygame.Rect(GRID_SIZE * GRID_WIDTH + 10, 170, 150, 30)
+    pygame.draw.rect(screen, BLACK, restart_button, 1)
+
+    restart_surface = font.render("Restart", True, BLACK)
+    screen.blit(restart_surface, (GRID_SIZE * GRID_WIDTH + 45, 175))
+
+    return restart_button
+
+def restart_game():
+    return [[GoGrid() for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)], []
+
+# game rules
+def is_legal_move(board, row, col, color):
+    # Check if the move is within the board and the intersection is empty
+    if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE and board[row][col].empty:
+        # Check for the suicide rule
+        temp_board = [[grid.empty for grid in row] for row in board]
+        temp_board[row][col] = False
+        if not has_liberties(temp_board, row, col):
+            return False
+
+        # Check for the ko rule
+        if is_ko(board, temp_board):
+            return False
+
+        return True
+    return False
+
+def is_ko(board, temp_board):
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            if board[r][c].empty != temp_board[r][c]:
+                return False
+    return True
+
+def has_liberties(board, row, col):
+    liberties = set()
+
+    def check_liberties(r, c):
+        if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE and board[r][c]:
+            liberties.add((r, c))
+
+    check_liberties(row - 1, col)
+    check_liberties(row + 1, col)
+    check_liberties(row, col - 1)
+    check_liberties(row, col + 1)
+
+    return liberties
+
+def capture_stones(board, row, col, color):
+    captured_stones = set()
+
+    def dfs(r, c, visited):
+        visited.add((r, c))
+        current_stone = board[r][c]
+
+        if not current_stone.empty and current_stone.color != color:
+            liberties = current_stone.has_liberties(board)
+
+            if not liberties:
+                captured_stones.add((r, c))
+            else:
+                for lib in liberties:
+                    if lib not in visited:
+                        dfs(*lib, visited)
+
+    visited = set()
+    dfs(row, col, visited)
+
+    print("Captured Stones:", captured_stones)  # Add this line for debugging
+
+    for stone in captured_stones:
+        board[stone[0]][stone[1]].remove_stone()
+
+def handle_player_move(board, mouseX, mouseY, turn):
+    col = mouseX // GRID_WIDTH
+    row = mouseY // GRID_WIDTH
+
+    if is_legal_move(board, row, col, turn):
+        board[row][col].place_stone(turn)
+        capture_stones(board, row, col, turn)  # Check for captures after placing stone
+
+def is_game_over(board):
+    # Implement your game-over condition here
+    return False
+
 GRID_SIZE = 9
 GRID_WIDTH = 50
 BROWN = (222, 184, 135)
@@ -114,7 +196,7 @@ start_time = time.time()
 font = pygame.font.Font(None, 36)
 
 # Main game loop
-while True:
+while not is_game_over(board):
     elapsed_time = time.time() - start_time
 
     for event in pygame.event.get():
@@ -125,7 +207,6 @@ while True:
             mouseX, mouseY = event.pos
 
             if 0 <= mouseX < GRID_SIZE * GRID_WIDTH and 0 <= mouseY < GRID_SIZE * GRID_WIDTH:
-                # Check if the mouse click is within the board area
                 if event.button == 1:  # Left-click
                     handle_player_move(board, mouseX, mouseY, turn)
                     move_history.append((mouseY // GRID_WIDTH, mouseX // GRID_WIDTH))
@@ -139,6 +220,11 @@ while True:
             elif pass_button.collidepoint(mouseX, mouseY) and event.button == 1:
                 # Implement pass logic here
                 turn = 'white' if turn == 'black' else 'black'
+            elif restart_button.collidepoint(mouseX, mouseY) and event.button == 1:
+                # Restart the game
+                board, move_history = restart_game()
+                start_time = time.time()
+                turn = 'black'
 
     screen.fill(BROWN)
     draw_board(screen, board)
@@ -146,5 +232,6 @@ while True:
     draw_turn_indicator(screen, font, turn)
     quit_button = draw_quit_button(screen, font)
     pass_button = draw_pass_button(screen, font)
+    restart_button = draw_restart_button(screen, font)
 
     pygame.display.flip()
