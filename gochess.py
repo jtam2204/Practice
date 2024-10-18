@@ -183,8 +183,10 @@ WHITE = (255, 255, 255)
 
 pygame.init()
 
-screen_width = GRID_SIZE * GRID_WIDTH + 200
-screen_height = GRID_SIZE * GRID_WIDTH
+border_width = 10
+
+screen_width =  GRID_SIZE * GRID_WIDTH + 200 + border_width
+screen_height = GRID_SIZE * GRID_WIDTH + border_width
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Local Go Chess Program")
 
