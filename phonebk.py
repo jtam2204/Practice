@@ -22,9 +22,12 @@ root.title('Address book')
 s=ttk.Style()
 s.configure('TButton', font=('', 12))
 
-startpage= tk.Frame(root)
+startpage= ttk.Notebook(root)
 startlabel=ttk.Label(startpage, text='Address Book')
 startlabel.pack(pady= 5)
+startpage.pack( pady= 10)
+
+tab1=ttk.Frame(startpage)
 
 table1= ttk.Treeview(startpage, columns=('name', 'phone', 'email'), show='headings', height= 10)
 table1.heading('name', text= 'Name')
@@ -91,9 +94,9 @@ clear_button=ttk.Button(row4, text='Clear', style= 'TButton',  command= item_cle
 clear_button.pack(padx=5, side= 'left')
 row4.pack(pady=5)
 
-input_frame.pack(pady=5)
+startpage.add(tab1, text='Contact list')
+startpage.add(input_frame, text='Edit Contact')
 
-startpage.pack()
 
 #insertion
 
